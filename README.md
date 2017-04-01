@@ -43,7 +43,7 @@
 
 ##7、dispatch_barrier_async 同 dispatch_barrier_sync异同。
 ###这是GCD中两个用来控制执行队列中任务执行顺序的函数，二者异同之处大家可参考。（demo同6的demo为同一个工程，可在6的demo中找到示例代码）。
-
+##8、APM实践
     
 
 
