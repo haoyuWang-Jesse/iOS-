@@ -34,8 +34,11 @@
     //requestMoreTime *moretime = [requestMoreTime new];
    // [moretime beginTask];
     //[NSTimer scheduledTimerWithTimeInterval:1 target:moretime selector:@selector(doSomeWorkWithTimer:) userInfo:nil repeats:YES];
+    
+    /*
     NSLog(@"进入后台");
     [requestMoreTime test];
+     */
 }
 
 
@@ -53,13 +56,20 @@
     // Called when the application is about to terminate. Save data if appropriate. See also applicationDidEnterBackground:.
     //requestMoreTime *moretime = [requestMoreTime new];
     //[NSTimer scheduledTimerWithTimeInterval:1 target:moretime selector:@selector(doSomeWorkWithTimer:) userInfo:nil repeats:YES];
+    /*
     NSLog(@"11111");
     //sleep(10);
     NSLog(@"222222");
     for (NSInteger i = 0; i< 100000000; i++) {
         NSLog(@"====i:%ld",(long)i);
     }
+     */
 }
 
+
+- (void)application:(UIApplication *)application handleEventsForBackgroundURLSession:(NSString *)identifier completionHandler:(void (^)())completionHandler {
+    NSLog(@"下载完成会收到系统回调");
+    completionHandler();
+}
 
 @end

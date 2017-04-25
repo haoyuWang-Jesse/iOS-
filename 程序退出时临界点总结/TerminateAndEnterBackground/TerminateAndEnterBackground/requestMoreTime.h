@@ -16,4 +16,6 @@
 - (void)doSomeWorkWithTimer:(NSTimer *)timer;
 
 + (void)test;
+
+- (void)beginDownload;
 @end

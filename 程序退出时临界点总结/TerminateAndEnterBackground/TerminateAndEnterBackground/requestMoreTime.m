@@ -8,7 +8,26 @@
 
 #import "requestMoreTime.h"
 
+
+
 /*
+ IOS提供了以下多中方式处理后台任务
+ 
+ 一：beginBackgroundTaskWithExpirationHandler
+ 
+ 二：特定任务的后台处理
+ 
+ 三：后台获取
+ 
+ 四：推送唤醒
+ 
+ 五：后台传输
+ 
+ 其中后面3种方式IOS7之后才支持
+ */
+
+/*
+ 一：
  app退出（或切换至后台）后，保证数据保存等耗时操作完成的攻略：
     1、app退出时，保证耗时任务能够完成的方法：
         当app退出时会触发applicationWillTerminate:代理方法,apple官方文档中针对该方法给出的解释是：
@@ -50,14 +69,63 @@
         作用：
             同beginBackgroundTaskWithExpirationHandler：对称的调用。
             该函数也可在子线程中被安全调用。
+        2.3：必须使用的endBackgroundTask结束任务的原因：当最大限制时间到期时，如果任务还没有执行完成，系统会强制结束任务，会触发看门狗超时等机制。所以需要主动去结束任务。
+ 
+    参考链接：https://onevcat.com/2013/08/ios7-background-multitask/
  
     3、单例线程安全：http://www.tuicool.com/articles/MZvqAz
     4、app从启动到运行，所执行的所有函数意思
  
- 
  */
 
-@interface requestMoreTime ()
+/*
+ 二：特定任务的后台处理
+例如：地图。语音，网络电话等
+ */
+
+/*
+ 三、后台获取
+  iOS7后新增内容，他的核心作用是：设定一个间隔，然后每隔一段时间唤醒应用处理相应地任务，比如我们使用的社交软件，可以每个一定时间获取最新的信息，这样下次我们进入后就不需要等待刷新。
+ */
+
+/*
+ 四、推送唤醒
+ */
+
+/*
+ 五、后台传输
+ iOS 7 后，系统提供了NSURLSession
+ 1）当加入了多个Task，程序没有切换到后台。
+ 这种情况Task会按照NSURLSessionConfiguration的设置正常下载，不会和ApplicationDelegate有交互。
+ 
+ 2）当加入了多个Task，程序切到后台，所有Task都完成下载。
+ 
+ 在切到后台之后，Session的Delegate不会再收到，Task相关的消息，直到所有Task全都完成后，系统会调用ApplicationDelegate的application:handleEventsForBackgroundURLSession:completionHandler:回调，之后“汇报”下载工作，对于每一个后台下载的Task调用Session的Delegate中的URLSession:downloadTask:didFinishDownloadingToURL:（成功的话）和URLSession:task:didCompleteWithError:（成功或者失败都会调用）。
+ 
+ 之后调用Session的Delegate回调URLSessionDidFinishEventsForBackgroundURLSession:。
+ 注意：在ApplicationDelegate被唤醒后，会有个参数ComplietionHandler，这个参数是个Block，这个参数要在后面Session的Delegate中didFinish的时候调用一下，如下：
+ 3）当加入了多个Task，程序切到后台，下载完成了几个Task，然后用户又切换到前台。（程序没有退出）
+ 　　
+ 切到后台之后，Session的Delegate仍然收不到消息。在下载完成几个Task之后再切换到前台，系统会先汇报已经下载完成的Task的情况，然后继续下载没有下载完成的Task，后面的过程同第一种情况。
+ 
+ 4）当加入了多个Task，程序切到后台，几个Task已经完成，但还有Task还没有下载完的时候关掉强制退出程序，然后再进入程序的时候。（程序退出了）
+ 
+ 最后这个情况比较有意思，由于程序已经退出了，后面没有下完Session就不在了后面的Task肯定是失败了。但是已经下载成功的那些Task，新启动的程序也没有听“汇报”的机会了。经过实验发现，这个时候之前在NSURLSessionConfiguration设置的NSString类型的ID起作用了，当ID相同的时候，一旦生成Session对象并设置Delegate，马上可以收到上一次关闭程序之前没有汇报工作的Task的结束情况（成功或者失败）。但是当ID不相同，这些情况就收不到了，因此为了不让自己的消息被别的应用程序收到，或者收到别的应用程序的消息，起见ID还是和程序的Bundle名称绑定上比较好，至少保证唯一性。
+ */
+
+/*
+ 问题：1、下载时可以在下载失败后，根据保存的内容，恢复上次下载，其实就是类似于断点续传的原理。但是上传时，杀掉app导致上传失败，下次在启动时能够恢复吗？要上传的数据会被系统保存下来吗？
+    2、断点续传和后台传输，在后台传输的情况下进行断点续传？？
+    3、completionHandler什么时间调用。
+ 参考链接：
+    1、http://www.cnblogs.com/biosli/p/iOS_Network_URL_Session.html  下面的问题值得思考，总结
+    2、http://www.cocoachina.com/ios/20160503/16053.html
+ 
+    恢复下载失败的参考：https://forums.developer.apple.com/thread/24770
+ */
+
+
+@interface requestMoreTime () <NSURLSessionDownloadDelegate,NSURLSessionDelegate>
 {
     NSUInteger _times;
 }
@@ -104,15 +172,107 @@
     //请求耗时任务
     __weak __typeof__ (self) wself = self;
     self.taskFlag = [[UIApplication sharedApplication] beginBackgroundTaskWithExpirationHandler:^{
-        //结束任务：
+        //结束任务：主动结束任务是为了，不让系统杀掉app，触发看门狗超时崩溃
+        //在主线程中回调：在主线程中同步清空任务。
         //最大时间到期后，执行的block，一般最大时间为10分钟
-        if(self.taskFlag != UIBackgroundTaskInvalid) {
-            __strong __typeof (wself) sself = wself;
-            [[UIApplication sharedApplication] endBackgroundTask:sself.taskFlag];
-            sself.taskFlag = UIBackgroundTaskInvalid;
-        }
+        
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if(self.taskFlag != UIBackgroundTaskInvalid) {
+                __strong __typeof (wself) sself = wself;
+                //do some clean up work
+                [[UIApplication sharedApplication] endBackgroundTask:sself.taskFlag];
+                sself.taskFlag = UIBackgroundTaskInvalid;
+            }
+        });
     }];
     
+}
+
+
+#pragma mark - 
+
+- (NSURLSession*)backgroundSession {
+    NSString *uniqueID = @"backgroundSessionID";
+    NSURLSessionConfiguration *configureObjc = [NSURLSessionConfiguration backgroundSessionConfigurationWithIdentifier:uniqueID];
+    NSURLSession *session = [NSURLSession sessionWithConfiguration:configureObjc delegate:self delegateQueue:nil];
+    return session;
+}
+
+- (NSURLSession*)defaultSession {
+    NSURLSession *session = [NSURLSession sessionWithConfiguration:[NSURLSessionConfiguration defaultSessionConfiguration] delegate:self delegateQueue:nil];
+    return session;
+}
+
+- (void)beginDownload {
+    NSString *URLString = @"http://dlsw.baidu.com/sw-search-sp/soft/9d/25765/sogou_mac_32c_V3.2.0.1437101586.dmg";
+    NSURL *downloadUrl = [NSURL URLWithString:URLString];
+    NSURLRequest *request = [NSURLRequest requestWithURL:downloadUrl];
+    NSURLSession *session = [self backgroundSession];
+    NSURLSessionDownloadTask *downloadTask = [session downloadTaskWithRequest:request];
+    [downloadTask resume];
+}
+
+- (void)URLSession:(NSURLSession *)session downloadTask:(NSURLSessionDownloadTask *)downloadTask didFinishDownloadingToURL:(NSURL *)location {
+    NSLog(@"taskID:%ld,download=====%@",(long)downloadTask.taskIdentifier,[location absoluteString]);
+}
+
+
+- (void)URLSessionDidFinishEventsForBackgroundURLSession:(NSURLSession *)session {
+    
+}
+
+- (void)URLSession:(NSURLSession *)session task:(NSURLSessionTask *)task didCompleteWithError:(NSError *)error {
+    if(error) {
+        NSLog(@"taskID:%ld  error:======%@",(long)task.taskIdentifier,error.localizedDescription);
+        NSData *data= error.userInfo[NSURLSessionDownloadTaskResumeData];
+        if([self __isValidResumeData:data]) {
+            NSURLSessionDownloadTask *downloadTask = [session downloadTaskWithResumeData:data];
+            [downloadTask resume];
+        }
+    }
+    else {
+        NSLog(@"======下载完成");
+    }
+}
+
+- (void)URLSession:(NSURLSession *)session downloadTask:(NSURLSessionDownloadTask *)downloadTask didWriteData:(int64_t)bytesWritten totalBytesWritten:(int64_t)totalBytesWritten totalBytesExpectedToWrite:(int64_t)totalBytesExpectedToWrite {
+   NSString *progressText = [NSString stringWithFormat:@"下载进度:%f",(double)totalBytesWritten/totalBytesExpectedToWrite];
+    NSLog(@"taskID:%ld, 进度======%@",(long)downloadTask.taskIdentifier,progressText);
+}
+
+//仔细看会发现回调的方法里面并没用NSData传回来，多了一个location，顾名思义，location就是下载好的文件写入沙盒的地址，打印一下发现下载好的文件被自动写入的temp文件夹下面了
+//不过在下载完成之后会自动删除temp中的文件，所有我们需要做的只是在回调中把文件移动(或者复制，反正之后会自动删除)到caches中。
+
+
+- (BOOL)__isValidResumeData:(NSData *)data{
+    if (!data || [data length] < 1) return NO;
+    
+    NSError *error;
+    NSDictionary *resumeDictionary = [NSPropertyListSerialization propertyListWithData:data options:NSPropertyListImmutable format:NULL error:&error];
+    if (!resumeDictionary || error) return NO;
+    
+    NSString *resumeDataFileName = resumeDictionary[@"NSURLSessionResumeInfoTempFileName"];
+    NSString *newTempPath = NSTemporaryDirectory();
+    NSString *newResumeDataPath = [newTempPath stringByAppendingPathComponent:resumeDataFileName];
+    [resumeDictionary setValue:newResumeDataPath forKey:@"NSURLSessionResumeInfoLocalPath"];
+    
+    
+    
+    
+    NSString *localTmpFilePath = [resumeDictionary objectForKey:@"NSURLSessionResumeInfoLocalPath"];
+    if ([localTmpFilePath length] < 1) return NO;
+    
+    BOOL result = [[NSFileManager defaultManager] fileExistsAtPath:localTmpFilePath];
+    
+    if (!result) {
+        NSString *bundleIdentifier = [[NSBundle mainBundle] bundleIdentifier];
+        NSString *localName = [localTmpFilePath lastPathComponent];
+        NSArray *paths = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES);
+        NSString *cachesDir = [paths objectAtIndex:0];
+        NSString *localCachePath = [[[cachesDir stringByAppendingPathComponent:@"com.apple.nsurlsessiond/Downloads"]stringByAppendingPathComponent:bundleIdentifier]stringByAppendingPathComponent:localName];
+        result = [[NSFileManager defaultManager] moveItemAtPath:localCachePath toPath:localTmpFilePath error:nil];
+    }
+    return result;
 }
 
 @end
