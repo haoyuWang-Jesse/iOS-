@@ -120,6 +120,7 @@
  参考链接：
     1、http://www.cnblogs.com/biosli/p/iOS_Network_URL_Session.html  下面的问题值得思考，总结
     2、http://www.cocoachina.com/ios/20160503/16053.html
+    3、http://www.wangyangdev.com/2014/11/10/iOS里面的多任务处理/
  
     恢复下载失败的参考：https://forums.developer.apple.com/thread/24770
  */
