@@ -1,0 +1,86 @@
+runtime 第一节 类和对象
+
+类与对象操作函数：
+  runtime提供了大量的函数来操作类与对象。类的操作方法大部分是以<#class_#>为前缀的，而对象的操作方法大部分是以<#objc_#>或<#object_#>为前缀。下面我们将根据这些方法的用途来分类讨论这些方法的使用。
+
+一、类相关的操作函数
+1、类名：获取类名 const char *class_getName(Class cls);
+      对于<#class_getName#>函数，如果传入的cls为Nil，则返回一个字字符串。
+
+2、父类和元类
+获取父类：Class class_getSuperclass(class cls);
+判断给定的Class是否为元类：Bool class_isMetaClass(class cls);
+
+3、实例变量大小
+获取实例变量大小操作：size_t class_getInstanceSize(class cls);
+
+4、成员变量(ivars)和属性(property)
+在<#objc_class#>中所有的”成员变量“和”属性“的信息都是放在链表<#ivars#>中的，<#ivars#>是一个数组，数组中每个元素是一个指向<#ivar#>的指针
+
+4.1、<#成员变量#>操作函数：
+（1）获取指定实例变量 :Ivar class_getInstanceVariable(Class cls,const char *name);
+（2）获取指定类成员变量：Ivar class_getClassVariable(Class cls,const char *name);  ?????????
+（3）添加成员变量：BOOL class_addIvar(Class cls,const char *name,size_t size,uint8_t alignment,const char *types);
+这里需要注意：只有为类添加成员变量，不能为对象添加成员变量，因为对象创建出来后，内存结构已经固定。
+（4）获取整个成员变量列表：Ivar * class_getIvarList(Class cls,unsigned int *outCount);
+
+详细解释：
+（3）oc不支持往已经存在的类中添加实例变量，因此无论是系统库提供的类，还是我们自定义的类。都无法动态的添加成员变量。
+    我们通过运行时来创建一个类的话，该如何动态的添加成员变量呢？：使用class_addIvar函数。
+    不过需要注意的是：这个方法只能在objc_allocateClassPair函数与objc_registerClassPair之间调用。另外，这个类也不能是元类。
+    成员变量的按字节最小对齐量是1<<alignment。这取决于ivar的类型和机器的架构。如果变量的类型是指针类型，则传递log2(sizeof(pointer_type))。
+理解：class_addIvar 也不能动态为已有的类添加，该方法作用：在动态创建类的时候，添加成员变量。
+（4）clas_getIvarList返回一个数组，数组中的每一个元素都指向一个ivar结构体。注意：该数组必须使用free释放。
+
+4.2、<#属性#>操作函数：
+（1）获取指定属性：objc_property_t class_getProperty(Class cls,const char *name);
+（2）获取属性列表：objc_property_t * class_copyPropertyList(Class cls,unsigned int *outCount);
+（3）为类添加属性：BOOL class_addProperty(Class cls, const char *name, const objc_property_attribute_t *attributes, unsigned int attributeCount ) ???? 不能添加成员变量，能添加属性？？
+（4）替换类的属性：void class_replaceProperty( Class cls, const char *name, const objc_property_attribute_t *attributes, unsigned int attributeCount)???????????
+
+5、OC中有垃圾回收机制：runtime提供了几个函数来确定一个对象的内存区域是否可以被垃圾回收器扫描，从而处理weak和strong引用。
+<#const uint8_t * class_getIvarLayout ( Class cls );#>
+<#void class_setIvarLayout ( Class cls, const uint8_t *layout );#>
+<#const uint8_t * class_getWeakIvarLayout ( Class cls );#>
+<#void class_setWeakIvarLayout ( Class cls, const uint8_t *layout );#>
+
+当时通常不需要我们去主动调用这些方法，在调用objc_registerClassPair时，会生成合理布局。
+
+6、方法操作：注意获取方法和获取方法的实现不一样
+（1）获取实例方法: Method class_getInstanceMethod(Class cls,SEL name);
+（2）获取类方法: Method class_getClassMethod(Class cls,SEL name);
+（3）获取方法列表：Method * class_copyMethodList(Class cls, const int *outCount);
+（4）添加方法: BOOL class_addMethod(Class cls,SEL name,IMP imp,const *char name);
+（5）替代方法的实现：IMP class_replaceMethod(Class cls,SEL name,IMP newimp,const char *types); ????
+（6）返回方法的实现:IMP class_getMethodImplementation(Class cls ,SEL name);
+                IMP class_getMethodImplementation_stret(Class cls ,SEL name);
+（7）判断类实例是否能相应制定的selector:BOOL class_respondsToSelector(Class cls,SEL sel);
+
+详细解释：
+（1）、（2）会去搜索父类的实现，而（3）class_copyMethodList不会搜索父类的实现。
+（3）class_copyMethodList函数返回的是所有的<#实例方法#>数组，注意：无类方法。类方法存在元类（meta_class）中,要想获取类方法，需要使用class_copyMethodList（objc_getClass(cls),&outCount);
+获取到列表后需要使用free()释放。
+（4）添加方法：(1)class_addMethod的实现会覆盖父类中同名方法的实现，但不会替代本类中方法的实现。如果本类中已经存在同名的实现，则返回NO.如果要修改已经存在的实现，可以使用method_setImplementation.
+            (2)不同于成员变量，可以为一个类动态的添加方法，不管这个类是否已经存在。
+            (3)types是一个字符数组，用来描述传递给方法的参数类型。
+(5)class_replaceMethod:行为分为两种 1）若果不存在name指定的方法，则类似于class_addMethod函数一样会添加方法，2）如果存在name指定的方法，则类似于method_setImplemetation一样，替换方法。
+(6)class_getMethodImplementation:这个函数是用来获取方法实现（IMP）的。它会在向实例方法发送消息时调用，比method_getImplementation()快。
+注意：返回值可能不一定是方法的时机实现，也可能是一个指向runtime内部的函数。例如：class不能响应指定的selector时，这时返回的函数指针就是消息转发机制的一部分。
+(7)class_respondsToSelector函数，我们通常使用NSObject类的respondsToSelector:或instancesRespondToSelector:方法来达到相同目的。
+(7.1)respondsToSelector:和instancesRespondToSelector: 区别：
+    1、类：一个是类方法，一个是实例方法。
+    2、instancesRespondToSelector:用来判断“类的实例”是否能够响应指定的selector。类似于：[对象 respondToSelector:]。
+    3、respondsToSelector:实例方法，用来判断实例是否能响应selector。
+
+
+
+
+
+
+
+
+
+
+
+
+
