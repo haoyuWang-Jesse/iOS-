@@ -1,9 +1,37 @@
 runtime 第一节 类和对象
 
-类与对象操作函数：
+一、类与对象基础数据结构
+1、类：objc_class
+
+struct objc_class {
+    Class isa  OBJC_ISA_AVAILABILITY;
+    #if !__OBJC2__
+    Class super_class                   	OBJC2_UNAVAILABLE;	// 父类
+    const char *name                      	OBJC2_UNAVAILABLE;	// 类名
+    long version                          	OBJC2_UNAVAILABLE;	// 类的版本信息，默认为0
+    long info                            	OBJC2_UNAVAILABLE;	// 类信息，供运行期使用的一些位标识
+    long instance_size                   	OBJC2_UNAVAILABLE;	// 该类的实例变量大小
+    struct objc_ivar_list *ivars         	OBJC2_UNAVAILABLE;	// 该类的成员变量链表
+    struct objc_method_list **methodLists 	OBJC2_UNAVAILABLE;	// 方法定义的链表
+    struct objc_cache *cache              	OBJC2_UNAVAILABLE;	// 方法缓存
+    struct objc_protocol_list *protocols 	OBJC2_UNAVAILABLE;	// 协议链表
+ #endif
+} OBJC2_UNAVAILABLE;
+
+2、对象：objc_object
+ struct objc_object {
+  Class isa;
+ }
+
+3、meta-class
+类也是一个对象，所以也有isa指针，它的isa指针指向的就是meta_class。
+meta_class也是一个类，它也有isa指针，那它的isa指针指向谁？OC设计者为了避免无限循环，规定：所有的meta_class的isa指针指向基类meta_class.基类的isa指针指向本身，这样就形成了一个闭环。
+
+二、类与对象操作函数：
   runtime提供了大量的函数来操作类与对象。类的操作方法大部分是以<#class_#>为前缀的，而对象的操作方法大部分是以<#objc_#>或<#object_#>为前缀。下面我们将根据这些方法的用途来分类讨论这些方法的使用。
 
-一、类相关的操作函数
+<#类相关的操作函数#>:
+
 1、类名：获取类名 const char *class_getName(Class cls);
       对于<#class_getName#>函数，如果传入的cls为Nil，则返回一个字字符串。
 
@@ -18,7 +46,7 @@ runtime 第一节 类和对象
 在<#objc_class#>中所有的”成员变量“和”属性“的信息都是放在链表<#ivars#>中的，<#ivars#>是一个数组，数组中每个元素是一个指向<#ivar#>的指针
 
 4.1、<#成员变量#>操作函数：
-（1）获取指定实例变量 :Ivar class_getInstanceVariable(Class cls,const char *name);
+（1）获取指定名称的成员变量 :Ivar class_getInstanceVariable(Class cls,const char *name);
 （2）获取指定类成员变量：Ivar class_getClassVariable(Class cls,const char *name);  ?????????
 （3）添加成员变量：BOOL class_addIvar(Class cls,const char *name,size_t size,uint8_t alignment,const char *types);
 这里需要注意：只有为类添加成员变量，不能为对象添加成员变量，因为对象创建出来后，内存结构已经固定。
@@ -30,7 +58,7 @@ runtime 第一节 类和对象
     不过需要注意的是：这个方法只能在objc_allocateClassPair函数与objc_registerClassPair之间调用。另外，这个类也不能是元类。
     成员变量的按字节最小对齐量是1<<alignment。这取决于ivar的类型和机器的架构。如果变量的类型是指针类型，则传递log2(sizeof(pointer_type))。
 理解：class_addIvar 也不能动态为已有的类添加，该方法作用：在动态创建类的时候，添加成员变量。
-（4）clas_getIvarList返回一个数组，数组中的每一个元素都指向一个ivar结构体。注意：该数组必须使用free释放。
+（4）clas_getIvarList返回一个数组，数组中的每一个元素都指向一个ivar结构体。注意：该数组必须使用free释放，这个数组<#不包含在父类中声明的变量#>。
 
 4.2、<#属性#>操作函数：
 （1）获取指定属性：objc_property_t class_getProperty(Class cls,const char *name);
@@ -51,10 +79,10 @@ runtime 第一节 类和对象
 （2）获取类方法: Method class_getClassMethod(Class cls,SEL name);
 （3）获取方法列表：Method * class_copyMethodList(Class cls, const int *outCount);
 （4）添加方法: BOOL class_addMethod(Class cls,SEL name,IMP imp,const *char name);
-（5）替代方法的实现：IMP class_replaceMethod(Class cls,SEL name,IMP newimp,const char *types); ????
-（6）返回方法的实现:IMP class_getMethodImplementation(Class cls ,SEL name);
+（5）替代方法的实现：IMP class_replaceMethod(Class cls,SEL name,IMP newimp,const char *types);
+（6）返回方法的实现:IMP class_getMethodImplementation(Class cls ,SEL name);    ？？？什么方法？？
                 IMP class_getMethodImplementation_stret(Class cls ,SEL name);
-（7）判断类实例是否能相应制定的selector:BOOL class_respondsToSelector(Class cls,SEL sel);
+（7）判断类实例是否能响应指定的selector:BOOL class_respondsToSelector(Class cls,SEL sel);
 
 详细解释：
 （1）、（2）会去搜索父类的实现，而（3）class_copyMethodList不会搜索父类的实现。
@@ -65,16 +93,24 @@ runtime 第一节 类和对象
             (3)types是一个字符数组，用来描述传递给方法的参数类型。
 (5)class_replaceMethod:行为分为两种 1）若果不存在name指定的方法，则类似于class_addMethod函数一样会添加方法，2）如果存在name指定的方法，则类似于method_setImplemetation一样，替换方法。
 (6)class_getMethodImplementation:这个函数是用来获取方法实现（IMP）的。它会在向实例方法发送消息时调用，比method_getImplementation()快。
-注意：返回值可能不一定是方法的时机实现，也可能是一个指向runtime内部的函数。例如：class不能响应指定的selector时，这时返回的函数指针就是消息转发机制的一部分。
+注意：返回值可能不一定是方法的实际实现，也可能是一个指向runtime内部的函数。例如：class不能响应指定的selector时，这时返回的函数指针就是消息转发机制的一部分。
 (7)class_respondsToSelector函数，我们通常使用NSObject类的respondsToSelector:或instancesRespondToSelector:方法来达到相同目的。
 (7.1)respondsToSelector:和instancesRespondToSelector: 区别：
     1、类：一个是类方法，一个是实例方法。
     2、instancesRespondToSelector:用来判断“类的实例”是否能够响应指定的selector。类似于：[对象 respondToSelector:]。
     3、respondsToSelector:实例方法，用来判断实例是否能响应selector。
 
+7、协议相关操作函数：
+（1）添加协议： BOOL class_addProtocol(Class cls,Protocol *protocol);
+（2）返回类是否遵守某个协议：BOOL class_conformsToProtocol(Class cls,Protocol *protocol);
+（3）返回类实现的协议列表：Protocol *class_copyProtocolList(class cls,unsigned int *outCount);
+
+<#class_conformsProtocol#> 可以用NSObject的conformsProtocol:来代替
+<#class_copyProtocolList#> 返回的是一个数组，需要用free()来释放。
 
 
 
+<#对象相关的操作函数#>:
 
 
 
