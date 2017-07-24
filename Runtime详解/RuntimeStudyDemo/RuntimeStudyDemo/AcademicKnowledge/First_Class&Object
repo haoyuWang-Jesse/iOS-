@@ -108,12 +108,37 @@ meta_class也是一个类，它也有isa指针，那它的isa指针指向谁？O
 <#class_conformsProtocol#> 可以用NSObject的conformsProtocol:来代替
 <#class_copyProtocolList#> 返回的是一个数组，需要用free()来释放。
 
+8、版本-----不常用
+（1）获取版本号： int class_getVersion(Class cls);
+（2）设置版本号： void class_setVersion(Class cls);
+
+9、其他 ---- runtime 还提供了两个函数来供CoreFoundation的tool-free bridging使用，即：
+1、Class objc_getFutureClass ( const char *name );
+2、void objc_setFutureClass ( Class cls, const char *name );
 
 
 <#对象相关的操作函数#>:
 
 
+三、动态创建类和对象：
 
+1、动态创建类：动态创建类涉及到以下几个函数：
+
+（1）创建一个新类和元类：Class objc_allocateClassPair(Class superclass,const char *name,size_t extraBytes);
+（2）销毁一个类及其相关的类：void objc_disposeClassPair();
+（3）注册（1）汇总创建的类。成对使用 ：void objc_RegisterClassPair(Class cls);
+
+注意：
+（1）objc_allocateClassPair函数：如果我们要创建一个<#根类#>，则superclass指定为Nil。
+（2）extraBytes通常指定为0，该参数是分配给类和元类对象尾部的索引ivars的字节数。
+（3）为了创建一个新类，我们需要调用objc_allocateClassPair。然后使用诸如class_addMethod，class_addIvar等函数来为新创建的类添加方法、实例变量和属性等。完成这些后，我们需要调用objc_registerClassPair函数来注册类，之后这个新类就可以在程序中使用了。
+（4）<#实例方法#>和<#实例变量#>应该添加到类自身上，而<#类方法#>应该添加到类的<#元类#>上
+（5）objc_disposeClassPair 函数用于销毁一个类，不过需要注意的是，<#如果程序运行中还存在类或其子类的实例#>，则不能调用针对类调用该方法。
+
+2、（1）动态创建对象：ARC环境下不可用
+   （2）实例操作函数：共三类
+
+3、获取类定义（类定义：.h文件？？）
 
 
 
