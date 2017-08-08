@@ -17,6 +17,7 @@
 		06D472711EEA338600B79751 /* RuntimeStudyDemoUITests.m in Sources */ = {isa = PBXBuildFile; fileRef = 06D472701EEA338600B79751 /* RuntimeStudyDemoUITests.m */; };
 		06D472811EEA33EF00B79751 /* First_Class&Object in Resources */ = {isa = PBXBuildFile; fileRef = 06D4727F1EEA33EF00B79751 /* First_Class&Object */; };
 		06D472821EEA33EF00B79751 /* Second_ivars&Property in Resources */ = {isa = PBXBuildFile; fileRef = 06D472801EEA33EF00B79751 /* Second_ivars&Property */; };
+		06D472841F2A321800B79751 /* Third_Method&Message in Resources */ = {isa = PBXBuildFile; fileRef = 06D472831F2A321800B79751 /* Third_Method&Message */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -55,6 +56,7 @@
 		06D472721EEA338600B79751 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		06D4727F1EEA33EF00B79751 /* First_Class&Object */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "First_Class&Object"; sourceTree = "<group>"; };
 		06D472801EEA33EF00B79751 /* Second_ivars&Property */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "Second_ivars&Property"; sourceTree = "<group>"; };
+		06D472831F2A321800B79751 /* Third_Method&Message */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "Third_Method&Message"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -150,6 +152,7 @@
 			children = (
 				06D4727F1EEA33EF00B79751 /* First_Class&Object */,
 				06D472801EEA33EF00B79751 /* Second_ivars&Property */,
+				06D472831F2A321800B79751 /* Third_Method&Message */,
 			);
 			path = AcademicKnowledge;
 			sourceTree = "<group>";
@@ -260,6 +263,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				06D472841F2A321800B79751 /* Third_Method&Message in Resources */,
 				06D472811EEA33EF00B79751 /* First_Class&Object in Resources */,
 				06D472821EEA33EF00B79751 /* Second_ivars&Property in Resources */,
 				06D4725B1EEA338600B79751 /* LaunchScreen.storyboard in Resources */,
@@ -521,6 +525,7 @@
 				06D472771EEA338600B79751 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		06D472781EEA338600B79751 /* Build configuration list for PBXNativeTarget "RuntimeStudyDemoTests" */ = {
 			isa = XCConfigurationList;
@@ -529,6 +534,7 @@
 				06D4727A1EEA338600B79751 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		06D4727B1EEA338600B79751 /* Build configuration list for PBXNativeTarget "RuntimeStudyDemoUITests" */ = {
 			isa = XCConfigurationList;
@@ -537,6 +543,7 @@
 				06D4727D1EEA338600B79751 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
