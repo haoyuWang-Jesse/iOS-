@@ -1,0 +1,6 @@
+#use_frameworks!
+
+target 'RunLoopDemo04' do
+  pod 'Bugly'
+
+end
