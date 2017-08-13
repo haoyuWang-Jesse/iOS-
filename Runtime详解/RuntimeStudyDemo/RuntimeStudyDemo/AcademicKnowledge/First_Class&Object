@@ -105,8 +105,8 @@ meta_class也是一个类，它也有isa指针，那它的isa指针指向谁？O
 （2）返回类是否遵守某个协议：BOOL class_conformsToProtocol(Class cls,Protocol *protocol);
 （3）返回类实现的协议列表：Protocol *class_copyProtocolList(class cls,unsigned int *outCount);
 
-<#class_conformsProtocol#> 可以用NSObject的conformsProtocol:来代替
-<#class_copyProtocolList#> 返回的是一个数组，需要用free()来释放。
+class_conformsProtocol 可以用NSObject的conformsProtocol:来代替
+class_copyProtocolList 返回的是一个数组，需要用free()来释放。
 
 
 
